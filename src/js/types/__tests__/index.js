@@ -90,16 +90,23 @@ export const events = () => {
             (payload.features.major_version: number | null);
             (payload.features.minor_version: number | null);
             (payload.features.patch_version: number | null);
-            (payload.features.pin_protection: boolean);
+            (payload.features.pin_protection: boolean | null);
             (payload.features.passphrase_protection: boolean | null);
             (payload.features.label: string | null);
-            (payload.features.initialized: boolean);
+            (payload.features.initialized: boolean | null);
             (payload.features.revision: string | null);
-            (payload.features.needs_backup: boolean);
-            (payload.features.flags: number);
-            (payload.features.unfinished_backup: boolean);
-            (payload.features.no_backup: boolean);
+            (payload.features.needs_backup: boolean | null);
+            (payload.features.flags: number | null);
+            (payload.features.unfinished_backup: boolean | null);
+            (payload.features.no_backup: boolean | null);
             (payload.features.model: string);
+            // error does not exist
+            (payload.error: typeof undefined);
+        }
+
+        if (payload.type === 'unreadable') {
+            // error field is accessible only in unreadable device
+            payload.error.toLowerCase();
         }
     });
     TrezorConnect.off(DEVICE_EVENT, () => {});
@@ -127,6 +134,18 @@ export const events = () => {
         if (event.type === UI.REQUEST_BUTTON) {
             event.payload.code;
             event.payload.data;
+            event.payload.device;
+        }
+        if (event.type === UI.REQUEST_PIN) {
+            event.payload.type;
+            event.payload.device;
+        }
+        if (event.type === UI.INVALID_PIN) {
+            (event.payload.type: void);
+            event.payload.device;
+        }
+        if (event.type === UI.REQUEST_WORD) {
+            event.payload.type;
             event.payload.device;
         }
     });

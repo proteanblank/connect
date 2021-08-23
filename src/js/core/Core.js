@@ -23,6 +23,7 @@ import { find as findMethod } from './methods';
 import { create as createDeferred } from '../utils/deferred';
 import { resolveAfter } from '../utils/promiseUtils';
 import { initLog } from '../utils/debug';
+import { dispose as disposeBackend } from '../backend/BlockchainLink';
 import InteractionTimeout from '../utils/interactionTimeout';
 
 import type { IDevice } from '../device/Device';
@@ -34,6 +35,11 @@ import type {
     UiPromiseResponse,
     TransportInfo,
 } from '../types';
+import type {
+    ButtonRequest,
+    PinMatrixRequestType,
+    WordRequestType,
+} from '../types/trezor/protobuf';
 
 // Public variables
 // eslint-disable-next-line no-use-before-define
@@ -211,56 +217,57 @@ const initDevice = async (method: AbstractMethod) => {
     }
 
     const isWebUsb = _deviceList.transportType() === 'WebUsbPlugin';
-
     let device: IDevice | typeof undefined;
+    let showDeviceSelection = isWebUsb;
     if (method.devicePath) {
         device = _deviceList.getDevice(method.devicePath);
+        showDeviceSelection = !!device.unreadableError;
     } else {
-        let devicesCount = _deviceList.length();
-        let selectedDevicePath: string;
-        if (devicesCount === 1 && !isWebUsb) {
+        const devices = _deviceList.asArray();
+        if (devices.length === 1 && !isWebUsb) {
             // there is only one device available. use it
-            selectedDevicePath = _deviceList.getFirstDevicePath();
-            device = _deviceList.getDevice(selectedDevicePath);
+            device = _deviceList.getDevice(devices[0].path);
+            showDeviceSelection = !!device.unreadableError;
         } else {
-            // no devices available
+            showDeviceSelection = true;
+        }
+    }
 
-            // initialize uiPromise instance which will catch changes in _deviceList (see: handleDeviceSelectionChanges function)
-            // but do not wait for resolve yet
-            createUiPromise(UI.RECEIVE_DEVICE);
+    // show device selection when:
+    // - there are no devices
+    // - using webusb and method.devicePath is not set
+    // - device is in unreadable state
+    if (showDeviceSelection) {
+        // initialize uiPromise instance which will catch changes in _deviceList (see: handleDeviceSelectionChanges function)
+        // but do not wait for resolve yet
+        createUiPromise(UI.RECEIVE_DEVICE);
 
-            // wait for popup handshake
-            await getPopupPromise().promise;
+        // wait for popup handshake
+        await getPopupPromise().promise;
 
-            // check again for available devices
-            // there is a possible race condition before popup open
-            devicesCount = _deviceList.length();
-            if (devicesCount === 1 && !isWebUsb) {
-                // there is one device available. use it
-                selectedDevicePath = _deviceList.getFirstDevicePath();
-                device = _deviceList.getDevice(selectedDevicePath);
-            } else {
-                // request select device view
-                postMessage(
-                    UiMessage(UI.SELECT_DEVICE, {
-                        webusb: isWebUsb,
-                        devices: _deviceList.asArray(),
-                    }),
-                );
+        // check again for available devices
+        // there is a possible race condition before popup open
+        const devices = _deviceList.asArray();
+        if (devices.length === 1 && devices[0].type !== 'unreadable' && !isWebUsb) {
+            // there is one device available. use it
+            device = _deviceList.getDevice(devices[0].path);
+        } else {
+            // request select device view
+            postMessage(
+                UiMessage(UI.SELECT_DEVICE, {
+                    webusb: isWebUsb,
+                    devices: _deviceList.asArray(),
+                }),
+            );
 
-                // wait for device selection
-                const uiPromise = findUiPromise(method.responseID, UI.RECEIVE_DEVICE);
-                if (uiPromise) {
-                    const uiResp = await uiPromise.promise;
-                    if (uiResp.payload.remember) {
-                        if (!uiResp.payload.device.state) {
-                            delete uiResp.payload.device.state;
-                        }
-                        _preferredDevice = uiResp.payload.device;
-                    }
-                    selectedDevicePath = uiResp.payload.device.path;
-                    device = _deviceList.getDevice(selectedDevicePath);
+            // wait for device selection
+            const uiPromise = findUiPromise(method.responseID, UI.RECEIVE_DEVICE);
+            if (uiPromise) {
+                const { payload } = await uiPromise.promise;
+                if (payload.remember) {
+                    _preferredDevice = payload.device;
                 }
+                device = _deviceList.getDevice(payload.device.path);
             }
         }
     }
@@ -694,25 +701,35 @@ const closePopup = () => {
 /**
  * Handle button request from Device.
  * @param {IDevice} device
- * @param {string} code
+ * @param {string} protobuf.ButtonRequest
  * @returns {Promise<void>}
  * @memberof Core
  */
-const onDeviceButtonHandler = async (device: IDevice, code: string, method: AbstractMethod) => {
+const onDeviceButtonHandler = async (
+    device: IDevice,
+    request: ButtonRequest,
+    method: AbstractMethod,
+) => {
     // wait for popup handshake
-    const addressRequest = code === 'ButtonRequest_Address';
+    const addressRequest = request.code === 'ButtonRequest_Address';
     if (!addressRequest || (addressRequest && method.useUi)) {
         await getPopupPromise().promise;
     }
     const data =
-        typeof method.getButtonRequestData === 'function'
-            ? method.getButtonRequestData(code)
+        typeof method.getButtonRequestData === 'function' && request.code
+            ? method.getButtonRequestData(request.code)
             : null;
     // interaction timeout
     interactionTimeout();
     // request view
-    postMessage(DeviceMessage(DEVICE.BUTTON, { device: device.toMessageObject(), code }));
-    postMessage(UiMessage(UI.REQUEST_BUTTON, { device: device.toMessageObject(), code, data }));
+    postMessage(DeviceMessage(DEVICE.BUTTON, { ...request, device: device.toMessageObject() }));
+    postMessage(
+        UiMessage(UI.REQUEST_BUTTON, {
+            ...request,
+            device: device.toMessageObject(),
+            data,
+        }),
+    );
     if (addressRequest && !method.useUi) {
         postMessage(UiMessage(UI.ADDRESS_VALIDATION, data));
     }
@@ -721,14 +738,14 @@ const onDeviceButtonHandler = async (device: IDevice, code: string, method: Abst
 /**
  * Handle pin request from Device.
  * @param {IDevice} device
- * @param {string} type
+ * @param {string} protobuf.PinMatrixRequestType
  * @param {Function} callback
  * @returns {Promise<void>}
  * @memberof Core
  */
 const onDevicePinHandler = async (
     device: IDevice,
-    type: string,
+    type: PinMatrixRequestType,
     callback: (error: any, success: any) => void,
 ) => {
     // wait for popup handshake
@@ -745,7 +762,7 @@ const onDevicePinHandler = async (
 
 const onDeviceWordHandler = async (
     device: IDevice,
-    type: string,
+    type: WordRequestType,
     callback: (error: any, success: any) => void,
 ) => {
     // wait for popup handshake
@@ -927,7 +944,7 @@ const initDeviceList = async (settings: ConnectSettings) => {
             _log.error('TRANSPORT ERROR', error);
             if (_deviceList) {
                 _deviceList.disconnectDevices();
-                _deviceList.removeAllListeners();
+                _deviceList.dispose();
             }
 
             _deviceList = null;
@@ -971,10 +988,11 @@ export class Core extends EventEmitter {
         handleMessage(message, isTrustedOrigin);
     }
 
-    onBeforeUnload() {
+    dispose() {
         if (_deviceList) {
-            _deviceList.onBeforeUnload();
+            _deviceList.dispose();
         }
+        disposeBackend();
         this.removeAllListeners();
     }
 
@@ -1066,7 +1084,7 @@ const disableWebUSBTransport = async () => {
 
     try {
         // disconnect previous device list
-        _deviceList.onBeforeUnload();
+        _deviceList.dispose();
         // and init with new settings, without webusb
         await initDeviceList(settings);
     } catch (error) {

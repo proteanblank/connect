@@ -1,3 +1,58 @@
+# 8.1.29
+
+### Added
+- expose whole ButtonRequest object in UI.REQUEST_BUTTON event
+- 1.10.2 and 2.4.1 FW releases
+- TrezorConnect.dispose method
+
+### Fixed
+- restore Ropsten blockchain_link
+- add unreadable Device error details 
+- bootloader T1 getFeatures timeout handling
+- uploaded binary modified in the same way as when downloaded by version in FirmwareUpdate
+- TrezorConnect.firmwareUpdate binary type
+
+### Changed
+- expose udev installers via TRASNPORT_EVENT
+- rename onBeforeUnload to dispose
+- update rollout@1.1.0
+- update protobuf messages
+
+# 8.1.28 (never released)
+
+### Added
+- 1.10.1/2.4.0 firmware release.
+- support for intermediary firmware via `@trezor/rollout` dependency.
+- support for decreasing output in RBF signTransaction (since 1.10.0/2.4.0 FW).
+- support for Syscoin (SYS).
+
+### Changed
+- remove coin support via trezor-firmware/common submodule: PIVX, Gincoin (GIN), Pesetacoin (PTC), Zcoin (XZC), Ethereum Social (ETSC), Ethereum Classic Testnet (TETC), EtherCore (ERE), Atheios (ATH), EOS Classic (EOSC), REOSC Ecosystem (REOSC), Trust ETH reOrigin (TEO).
+- fix optional types of protobuf `Features`.
+
+# 8.1.27
+
+### Added
+- 1.10.0 firmware release.
+- Cardano: support for catalyst voting registration.
+
+### Changed
+- Cardano: `cardanoSignTransaction.metadata` param renamed to `auxiliaryData`.
+- Cardano: expose protobuf enums as `CardanoAddressType`, `CardanoCertificateType` and `CardanoPoolRelayType`, deprecate `constants/cardano` export.
+
+# 8.1.26
+
+### Added
+- 2.3.6 firmware release.
+- Cardano: support for chunked transaction serialization. (available since FW 2.3.7+)
+- `auto_lock_delay_ms` param to the `ApplySettings` method.
+- `safety_checks` field to the `ApplySettings` interface which lets you set the `safety_checks` Trezor feature.
+
+### Fixed
+- `signTransaction` parsing original transaction (RBF) with OP_RETURN output.
+- Incorrect type of the `safety_checks` Trezor feature.
+- Incorrect typescript type of the `binary` field of the `firmwareUpdate`'s params'.
+
 # 8.1.25
 
 ### Fixed

@@ -58,7 +58,8 @@ export type Config = {
     supportedFirmware: Array<{|
         coinType?: string,
         coin?: string | string[],
-        excludedMethods?: string[],
+        methods?: string[],
+        capabilities?: string[],
         min?: string[],
         max?: string[],
     |}>,

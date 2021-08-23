@@ -29,6 +29,10 @@ const ENUM_KEYS = [
     'RequestType',
     'BackupType',
     'Capability',
+    'SafetyCheckLevel',
+    'ButtonRequestType',
+    'PinMatrixRequestType',
+    'WordRequestType',
 ];
 
 const parseEnumTypescript = item => {
@@ -65,7 +69,7 @@ const parseEnum = item => {
     if (isTypescript) return parseEnumTypescript(item);
     const value = [];
     // declare enum
-    value.push(`const Enum_${item.name} = Object.freeze({`);
+    value.push(`export const Enum_${item.name} = Object.freeze({`);
     // declare fields
     item.values.forEach(field => {
         value.push(`    ${field.name}: ${field.id},`);
@@ -162,6 +166,7 @@ const ORDER = {
     HDNodeType: 'HDNodePathType',
     CardanoAssetGroupType: 'CardanoTxOutputType',
     CardanoTokenType: 'CardanoAssetGroupType',
+    TxAck: 'TxAckInputWrapper',
 };
 Object.keys(ORDER).forEach(key => {
     // find indexes

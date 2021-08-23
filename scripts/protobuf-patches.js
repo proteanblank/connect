@@ -18,20 +18,42 @@ const RULE_PATCH = {
     // TODO: Features should be union: bootloader|normal
     // fields below are marked as required because of backward compatibility (suite implementation)
     'Features.vendor': 'required',
+    'Features.bootloader_mode': 'required',
     'Features.device_id': 'required',
     'Features.major_version': 'required',
     'Features.minor_version': 'required',
     'Features.patch_version': 'required',
     'Features.pin_protection': 'required',
     'Features.passphrase_protection': 'required',
+    'Features.language': 'required',
     'Features.label': 'required',
     'Features.initialized': 'required',
     'Features.revision': 'required',
+    'Features.bootloader_hash': 'required',
+    'Features.imported': 'required',
+    'Features.unlocked': 'required',
+    'Features.firmware_present': 'required',
     'Features.needs_backup': 'required',
     'Features.flags': 'required',
+    'Features.fw_major': 'required',
+    'Features.fw_minor': 'required',
+    'Features.fw_patch': 'required',
+    'Features.fw_vendor': 'required',
+    'Features.model': 'required',
+    'Features.fw_vendor_keys': 'required',
     'Features.unfinished_backup': 'required',
     'Features.no_backup': 'required',
-    'Features.model': 'required',
+    'Features.recovery_mode': 'required',
+    'Features.backup_type': 'required',
+    'Features.sd_card_present': 'required',
+    'Features.sd_protection': 'required',
+    'Features.wipe_code_protection': 'required',
+    'Features.session_id': 'required',
+    'Features.passphrase_always_on_device': 'required',
+    'Features.safety_checks': 'required',
+    'Features.auto_lock_delay_ms': 'required',
+    'Features.display_rotation': 'required',
+    'Features.experimental_features': 'required',
     'NEMTransactionCommon.address_n': 'optional', // no address_n in multisig
     'NEMTransfer.mosaics': 'optional', // its valid to be undefined according to implementation/tests
     'NEMMosaicDefinition.networks': 'optional', // never used according to implementation/tests
@@ -46,25 +68,50 @@ const RULE_PATCH = {
 const TYPE_PATCH = {
     'Features.bootloader_mode': 'boolean | null',
     'Features.device_id': 'string | null',
+    'Features.pin_protection': 'boolean | null',
+    'Features.passphrase_protection': 'boolean | null',
+    'Features.language': 'string | null',
     'Features.label': 'string | null',
+    'Features.initialized': 'boolean | null',
+    'Features.revision': 'string | null',
     'Features.bootloader_hash': 'string | null',
+    'Features.imported': 'boolean | null',
+    'Features.unlocked': 'boolean | null',
     'Features.firmware_present': 'boolean | null',
+    'Features.needs_backup': 'boolean | null',
+    'Features.flags': 'number | null',
     'Features.fw_major': 'number | null',
     'Features.fw_minor': 'number | null',
     'Features.fw_patch': 'number | null',
     'Features.fw_vendor': 'string | null',
+    'Features.fw_vendor_keys': 'string | null',
+    'Features.unfinished_backup': 'boolean | null',
+    'Features.no_backup': 'boolean | null',
+    'Features.recovery_mode': 'boolean | null',
+    'Features.backup_type': 'BackupType | null',
+    'Features.sd_card_present': 'boolean | null',
+    'Features.sd_protection': 'boolean | null',
+    'Features.wipe_code_protection': 'boolean | null',
+    'Features.session_id': 'string | null',
+    'Features.passphrase_always_on_device': 'boolean | null',
+    'Features.safety_checks': 'SafetyCheckLevel | null',
+    'Features.auto_lock_delay_ms': 'number | null',
+    'Features.display_rotation': 'number | null',
+    'Features.experimental_features': 'boolean | null',
     'HDNodePathType.node': 'HDNodeType | string',
     'TxInputType.amount': 'number | string',
     'TxOutputBinType.amount': 'number | string',
     'TxInput.amount': 'string | number',
     'PrevOutput.amount': 'string | number',
     'FirmwareUpload.payload': 'Buffer',
+    'CardanoCatalystRegistrationParametersType.nonce': 'string | number',
     'CardanoPoolParametersType.pledge': 'string | number',
     'CardanoPoolParametersType.cost': 'string | number',
     'CardanoPoolParametersType.margin_numerator': 'string | number',
     'CardanoPoolParametersType.margin_denominator': 'string | number',
     'CardanoSignTx.fee': 'string | number',
     'CardanoSignTx.ttl': 'string | number',
+    'CardanoSignTx.validity_interval_start': 'string | number',
     'CardanoTokenType.amount': 'string | number',
     'EosAsset.amount': 'string',
     'EosAsset.symbol': 'string',
@@ -177,17 +224,11 @@ export type TxOutputType = {|
 
     TxAck: `// - TxAck replacement
 // TxAck needs more exact types
-// differences: RefTxInputType (no address_n) and TxInputType, partial exact responses in TxAckResponse
-export type RefTxInputType = {|
-    prev_hash: string;
-    prev_index: number;
-    script_sig: string;
-    sequence: number;
-    decred_tree?: number;
-|};
+// PrevInput and TxInputType requires exact responses in TxAckResponse
+// main difference: PrevInput should not contain address_n (unexpected field by protobuf)
 
 export type TxAckResponse = {|
-    inputs: Array<TxInputType | RefTxInputType>;
+    inputs: Array<TxInputType | PrevInput>;
 |} | {|
     bin_outputs: TxOutputBinType[];
 |} | {|

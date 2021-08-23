@@ -10,7 +10,7 @@ import type { CoinInfo, FirmwareRange } from '../../../types';
 
 type Param = {
     name: string,
-    type?: 'string' | 'number' | 'array' | 'buffer' | 'boolean' | 'amount' | 'object',
+    type?: 'string' | 'number' | 'array' | 'array-buffer' | 'boolean' | 'amount' | 'object',
     obligatory?: boolean,
     allowEmpty?: boolean,
 };
@@ -47,14 +47,10 @@ export const validateParams = (values: any, fields: Param[]) => {
                             `Parameter "${field.name}" has invalid value "${value}". Integer representation expected.`,
                         );
                     }
-                } else if (field.type === 'buffer') {
-                    if (
-                        typeof value === 'undefined' ||
-                        (typeof value.constructor.isBuffer === 'function' &&
-                            value.constructor.isBuffer(value))
-                    ) {
+                } else if (field.type === 'array-buffer') {
+                    if (!(value instanceof ArrayBuffer)) {
                         throw invalidParameter(
-                            `Parameter "${field.name}" has invalid type. "buffer" expected.`,
+                            `Parameter "${field.name}" has invalid type. "ArrayBuffer" expected.`,
                         );
                     }
                     // eslint-disable-next-line valid-typeof
@@ -103,39 +99,69 @@ export const getFirmwareRange = (
     const shortcut = coinInfo ? coinInfo.shortcut.toLowerCase() : null;
     // find firmware range in config.json
     const { supportedFirmware } = DataManager.getConfig();
-    const range =
-        supportedFirmware.find(
-            c =>
-                c.coinType === coinType ||
-                (Array.isArray(c.coin) && c.coin.includes(shortcut)) ||
-                (typeof c.coin === 'string' && c.coin === shortcut),
-        ) ||
-        supportedFirmware.find(
-            c => !c.coinType && !c.coin && c.excludedMethods && c.excludedMethods.includes(method),
-        );
+    const range = supportedFirmware
+        .filter(rule => {
+            // check if rule applies to requested method
+            if (rule.methods) {
+                return rule.methods.includes(method);
+            }
+            // check if rule applies to capability
+            if (rule.capabilities) {
+                return rule.capabilities.includes(method);
+            }
+            // rule doesn't have specified methods
+            // it may be a global rule for coin or coinType
+            return true;
+        })
+        .find(c => {
+            if (c.coinType) {
+                // rule for coin type
+                return c.coinType === coinType;
+            }
+            if (c.coin) {
+                // rule for coin shortcut
+                return (typeof c.coin === 'string' ? [c.coin] : c.coin).includes(shortcut);
+            }
+            // rule for method
+            return c.methods || c.capabilities;
+        });
 
     if (range) {
-        if (range.excludedMethods && !range.excludedMethods.includes(method)) {
-            // not in range. do not change default range
-            return current;
-        }
         const { min, max } = range;
         // override defaults
+        // NOTE:
+        // 0 may be confusing. means: no-support for "min" and unlimited support for "max"
         if (min) {
             const [t1, t2] = min;
-            if (current['1'].min === '0' || versionCompare(current['1'].min, t1) < 0) {
+            if (
+                t1 === '0' ||
+                current['1'].min === '0' ||
+                versionCompare(current['1'].min, t1) < 0
+            ) {
                 current['1'].min = t1;
             }
-            if (current['2'].min === '0' || versionCompare(current['2'].min, t2) < 0) {
+            if (
+                t2 === '0' ||
+                current['2'].min === '0' ||
+                versionCompare(current['2'].min, t2) < 0
+            ) {
                 current['2'].min = t2;
             }
         }
         if (max) {
             const [t1, t2] = max;
-            if (current['1'].max === '0' || versionCompare(current['1'].max, t1) < 0) {
+            if (
+                t1 === '0' ||
+                current['1'].max === '0' ||
+                versionCompare(current['1'].max, t1) < 0
+            ) {
                 current['1'].max = t1;
             }
-            if (current['2'].max === '0' || versionCompare(current['2'].max, t2) < 0) {
+            if (
+                t2 === '0' ||
+                current['2'].max === '0' ||
+                versionCompare(current['2'].max, t2) < 0
+            ) {
                 current['2'].max = t2;
             }
         }

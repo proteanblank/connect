@@ -1,5 +1,7 @@
 /* @flow */
 
+import type { SafetyCheckLevel } from './protobuf';
+
 export type ResetDevice = {
     strength?: number,
     label?: string,
@@ -17,6 +19,7 @@ export type ApplySettings = {
     use_passphrase?: boolean,
     label?: string,
     auto_lock_delay_ms?: number,
+    safety_checks?: SafetyCheckLevel,
 };
 
 export type ApplyFlags = {
@@ -28,17 +31,13 @@ export type ChangePin = {
 };
 
 export type FirmwareUpdateBinary = {
-    binary?: Buffer,
+    binary: ArrayBuffer,
 };
 export type FirmwareUpdate = {
-    version?: number[],
+    version: number[],
     btcOnly?: boolean,
     baseUrl?: string,
-};
-
-export type FirmwareRequest = {
-    length: number,
-    offset: number,
+    intermediary?: boolean,
 };
 
 export type RecoveryDevice = {

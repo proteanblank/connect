@@ -9,7 +9,7 @@ const LIB = path.resolve(__dirname, '../npm-extended/lib');
 const DATA_SRC = path.resolve(__dirname, '../src/data');
 const DATA = path.resolve(__dirname, '../npm-extended/data');
 
-const ignored = ['__tests__', '_old', 'icons', 'udev'];
+const ignored = ['__tests__', '__fixtures__', '_old', 'icons', 'udev'];
 const shouldIgnore = src => ignored.find(i => src.indexOf(i) >= 0);
 
 // copy all js files any make a copy with .flow extension
@@ -48,7 +48,9 @@ delete packageJSON.extendedDependencies;
 delete packageJSON.scripts;
 delete packageJSON.bin;
 delete packageJSON.private;
-packageJSON.version += '-extended';
+if (packageJSON.version.indexOf('-') < 0) {
+    packageJSON.version += '-extended';
+}
 packageJSON.main = 'lib/index.js';
 packageJSON.types = 'lib/typescript/index.d.ts';
 

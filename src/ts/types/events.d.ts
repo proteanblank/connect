@@ -1,6 +1,7 @@
 import { TRANSPORT, UI, IFRAME, POPUP } from './constants';
 import { ConnectSettings } from './params';
 import { Device } from './trezor/device';
+import { ButtonRequest, PinMatrixRequestType, WordRequestType } from './trezor/protobuf';
 import { DiscoveryAccount, SelectFeeLevel } from './account';
 import { CoinInfo, BitcoinNetworkInfo } from './networks/coinInfo';
 
@@ -17,11 +18,23 @@ export interface BridgeInfo {
     changelog: string;
 }
 
+export interface UdevInfo {
+    directory: string;
+    packages: Array<{
+        name: string;
+        platform: string[];
+        url: string;
+        signature?: string;
+        preferred?: boolean;
+    }>;
+}
+
 export interface TransportInfo {
     type: string;
     version: string;
     outdated: boolean;
     bridge?: BridgeInfo;
+    udev?: UdevInfo;
 }
 
 export type TransportEvent =
@@ -34,6 +47,7 @@ export type TransportEvent =
           payload: {
               error: string;
               bridge?: BridgeInfo;
+              udev?: UdevInfo;
           };
       };
 
@@ -53,19 +67,32 @@ export interface MessageWithoutPayload {
         | typeof UI.LOGIN_CHALLENGE_REQUEST;
 }
 
-export interface DeviceMessage {
-    type:
-        | typeof UI.REQUEST_PIN
-        | typeof UI.INVALID_PIN
-        | typeof UI.REQUEST_PASSPHRASE_ON_DEVICE
-        | typeof UI.REQUEST_PASSPHRASE
-        | typeof UI.INVALID_PASSPHRASE
-        | typeof UI.REQUEST_WORD;
-    payload: {
-        device: Device;
-        type?: string; // todo: better flow enum
-    };
-}
+export type DeviceMessage =
+    | {
+          type: typeof UI.REQUEST_PIN;
+          payload: {
+              device: Device;
+              type: PinMatrixRequestType;
+          };
+      }
+    | {
+          type: typeof UI.REQUEST_WORD;
+          payload: {
+              device: Device;
+              type: WordRequestType;
+          };
+      }
+    | {
+          type:
+              | typeof UI.INVALID_PIN
+              | typeof UI.REQUEST_PASSPHRASE_ON_DEVICE
+              | typeof UI.REQUEST_PASSPHRASE
+              | typeof UI.INVALID_PASSPHRASE;
+          payload: {
+              device: Device;
+              type?: typeof undefined;
+          };
+      };
 
 export interface ButtonRequestData {
     type: 'address';
@@ -73,11 +100,13 @@ export interface ButtonRequestData {
     address: string;
 }
 
+// ButtonRequest_FirmwareUpdate is a artificial button request thrown by "uploadFirmware" method
+// at the beginning of the uploading process
 export interface ButtonRequestMessage {
     type: typeof UI.REQUEST_BUTTON;
-    payload: {
+    payload: Omit<ButtonRequest, 'code'> & {
+        code?: ButtonRequest['code'] | 'ButtonRequest_FirmwareUpdate';
         device: Device;
-        code: string;
         data?: ButtonRequestData;
     };
 }

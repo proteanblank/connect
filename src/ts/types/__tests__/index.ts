@@ -87,6 +87,13 @@ export const events = async () => {
             payload.features.unfinished_backup;
             payload.features.no_backup;
             payload.features.model;
+            // @ts-expect-error: error does not exist
+            payload.error.toLowerCase();
+        }
+
+        if (payload.type === 'unreadable') {
+            // error field is accessible only in unreadable device
+            payload.error.toLowerCase();
         }
     });
     TrezorConnect.off(DEVICE_EVENT, () => {});
@@ -115,8 +122,24 @@ export const events = async () => {
         }
         if (event.type === UI.REQUEST_BUTTON) {
             event.payload.code;
+            event.payload.code === 'ButtonRequest_ConfirmOutput';
+            event.payload.code === 'ButtonRequest_FirmwareUpdate';
+            // @ts-expect-error
+            event.payload.code === 'foo';
             event.payload.data;
             event.payload.device;
+        }
+
+        if (event.type === UI.REQUEST_PIN) {
+            event.payload.type === 'PinMatrixRequestType_Current';
+            // @ts-expect-error
+            event.payload.type === 'foo';
+        }
+
+        if (event.type === UI.REQUEST_WORD) {
+            event.payload.type === 'WordRequestType_Plain';
+            // @ts-expect-error
+            event.payload.type === 'foo';
         }
     });
     TrezorConnect.off(UI_EVENT, () => {});

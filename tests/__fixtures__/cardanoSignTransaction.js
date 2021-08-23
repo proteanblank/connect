@@ -1,9 +1,8 @@
+import { NETWORK_IDS, PROTOCOL_MAGICS } from '../../src/js/constants/cardano';
 import {
-    ADDRESS_TYPE,
-    CERTIFICATE_TYPE,
-    NETWORK_IDS,
-    PROTOCOL_MAGICS,
-} from '../../src/js/constants/cardano';
+    Enum_CardanoAddressType as CardanoAddressType,
+    Enum_CardanoCertificateType as CardanoCertificateType,
+} from '../../src/js/types/trezor/protobuf';
 
 // vectors from https://github.com/trezor/trezor-firmware/tree/master/python/trezorlib/tests/device_tests/test_msg_cardano_sign_transaction.py
 
@@ -32,7 +31,7 @@ const SAMPLE_OUTPUTS = {
     },
     byron_change_output: {
         addressParameters: {
-            addressType: ADDRESS_TYPE.Byron,
+            addressType: CardanoAddressType.BYRON,
             path: "m/44'/1815'/0'/0/1",
         },
         amount: '1000000',
@@ -49,7 +48,7 @@ const SAMPLE_OUTPUTS = {
     },
     base_address_change_output: {
         addressParameters: {
-            addressType: ADDRESS_TYPE.Base,
+            addressType: CardanoAddressType.BASE,
             path: "m/1852'/1815'/0'/0/0",
             stakingPath: "m/1852'/1815'/0'/2/0",
         },
@@ -57,7 +56,7 @@ const SAMPLE_OUTPUTS = {
     },
     base_address_change_output_numbers: {
         addressParameters: {
-            addressType: ADDRESS_TYPE.Base,
+            addressType: CardanoAddressType.BASE,
             path: [0x80000000 + 1852, 0x80000000 + 1815, 0x80000000, 0, 0],
             stakingPath: [0x80000000 + 1852, 0x80000000 + 1815, 0x80000000, 2, 0],
         },
@@ -65,7 +64,7 @@ const SAMPLE_OUTPUTS = {
     },
     staking_key_hash_output: {
         addressParameters: {
-            addressType: ADDRESS_TYPE.Base,
+            addressType: CardanoAddressType.BASE,
             path: "m/1852'/1815'/0'/0/0",
             stakingKeyHash: '32c728d3861e164cab28cb8f006448139c8f1740ffb8e7aa9e5232dc',
         },
@@ -73,7 +72,7 @@ const SAMPLE_OUTPUTS = {
     },
     pointer_address_output: {
         addressParameters: {
-            addressType: ADDRESS_TYPE.Pointer,
+            addressType: CardanoAddressType.POINTER,
             path: "m/1852'/1815'/0'/0/0",
             certificatePointer: {
                 blockIndex: 1,
@@ -85,7 +84,7 @@ const SAMPLE_OUTPUTS = {
     },
     enterprise_address_output: {
         addressParameters: {
-            addressType: ADDRESS_TYPE.Enterprise,
+            addressType: CardanoAddressType.ENTERPRISE,
             path: "m/1852'/1815'/0'/0/0",
         },
         amount: '7120787',
@@ -131,20 +130,20 @@ const SAMPLE_OUTPUTS = {
 
 const SAMPLE_CERTIFICATES = {
     stake_registration: {
-        type: CERTIFICATE_TYPE.StakeRegistration,
+        type: CardanoCertificateType.STAKE_REGISTRATION,
         path: "m/1852'/1815'/0'/2/0",
     },
     stake_deregistration: {
-        type: CERTIFICATE_TYPE.StakeDeregistration,
+        type: CardanoCertificateType.STAKE_DEREGISTRATION,
         path: "m/1852'/1815'/0'/2/0",
     },
     stake_delegation: {
-        type: CERTIFICATE_TYPE.StakeDelegation,
+        type: CardanoCertificateType.STAKE_DELEGATION,
         path: "m/1852'/1815'/0'/2/0",
         pool: 'f61c42cbf7c8c53af3f520508212ad3e72f674f957fe23ff0acb4973',
     },
     stake_pool_registration: {
-        type: CERTIFICATE_TYPE.StakePoolRegistration,
+        type: CardanoCertificateType.STAKE_POOL_REGISTRATION,
         poolParameters: {
             poolId: 'f61c42cbf7c8c53af3f520508212ad3e72f674f957fe23ff0acb4973',
             vrfKeyHash: '198890ad6c92e80fbdab554dda02da9fb49d001bbd96181f3e07f7a6ab0d0640',
@@ -199,7 +198,7 @@ const SAMPLE_CERTIFICATES = {
         },
     },
     stake_pool_registration_no_metadata: {
-        type: CERTIFICATE_TYPE.StakePoolRegistration,
+        type: CardanoCertificateType.STAKE_POOL_REGISTRATION,
         poolParameters: {
             poolId: 'f61c42cbf7c8c53af3f520508212ad3e72f674f957fe23ff0acb4973',
             vrfKeyHash: '198890ad6c92e80fbdab554dda02da9fb49d001bbd96181f3e07f7a6ab0d0640',
@@ -493,6 +492,9 @@ export default {
 
         {
             description: 'signMetadata',
+            setup: {
+                firmware: [['2.0.0', '2.3.6']],
+            },
             params: {
                 inputs: [SAMPLE_INPUTS.shelley_input],
                 outputs: [SAMPLE_OUTPUTS.simple_shelley_output],
@@ -503,11 +505,72 @@ export default {
                 protocolMagic: PROTOCOL_MAGICS.mainnet,
                 networkId: NETWORK_IDS.mainnet,
             },
+            result: false,
+        },
+
+        {
+            description: 'signAuxiliaryData',
+            params: {
+                inputs: [SAMPLE_INPUTS.shelley_input],
+                outputs: [SAMPLE_OUTPUTS.simple_shelley_output],
+                fee: FEE,
+                ttl: TTL,
+                auxiliaryData: {
+                    blob:
+                        'a200a11864a118c843aa00ff01a119012c590100aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+                },
+                protocolMagic: PROTOCOL_MAGICS.mainnet,
+                networkId: NETWORK_IDS.mainnet,
+            },
             result: {
                 hash: '1875f1d59a53f1cb4c43949867d72bcfd857fa3b64feb88f41b78ddaa1a21cbf',
                 serializedTx:
                     '83a500818258203b40265111d8bb3c3c608d95b3a0bf83461ace32d79336579a1939b3aad1c0b700018182583901eb0baa5e570cffbe2934db29df0b6a3d7c0430ee65d4c3a7ab2fefb91bc428e4720702ebd5dab4fb175324c192dc9bb76cc5da956e3c8dff0102182a030a075820ea4c91860dd5ec5449f8f985d227946ff39086b17f10b5afb93d12ee87050b6aa100818258205d010cf16fdeff40955633d6c565f3844a288a24967cf6b76acbeb271b4f13c15840b2015772a91043aeb04b98111744a098afdade0db5e30206538d7f2814965a5800d45240137f4d0dc81845a71e67cda38beaf816a520d73c4decbf7cbf0f6d08a200a11864a118c843aa00ff01a119012c590100aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
             },
+            legacyResults: [
+                {
+                    // older FW doesn't support auxiliary data
+                    rules: ['<2.3.7'],
+                    payload: false,
+                },
+            ],
+        },
+
+        {
+            description: 'signCatalystVotingRegistration',
+            params: {
+                inputs: [SAMPLE_INPUTS.shelley_input],
+                outputs: [SAMPLE_OUTPUTS.simple_shelley_output],
+                fee: FEE,
+                ttl: TTL,
+                auxiliaryData: {
+                    catalystRegistrationParameters: {
+                        votingPublicKey:
+                            '1af8fa0b754ff99253d983894e63a2b09cbb56c833ba18c3384210163f63dcfc',
+                        stakingPath: "m/1852'/1815'/0'/2/0",
+                        rewardAddressParameters: {
+                            addressType: 0,
+                            path: "m/1852'/1815'/0'/0/0",
+                            stakingPath: "m/1852'/1815'/0'/2/0",
+                        },
+                        nonce: '22634813',
+                    },
+                },
+                protocolMagic: PROTOCOL_MAGICS.mainnet,
+                networkId: NETWORK_IDS.mainnet,
+            },
+            result: {
+                hash: '839a587109358e0aa81b8fb3d5fa74665fac303425ec544a4db7f6ba4e882dff',
+                serializedTx:
+                    '83a500818258203b40265111d8bb3c3c608d95b3a0bf83461ace32d79336579a1939b3aad1c0b700018182583901eb0baa5e570cffbe2934db29df0b6a3d7c0430ee65d4c3a7ab2fefb91bc428e4720702ebd5dab4fb175324c192dc9bb76cc5da956e3c8dff0102182a030a075820a943e9166f1bb6d767b175384d3bd7d23645170df36fc1861fbf344135d8e120a100818258205d010cf16fdeff40955633d6c565f3844a288a24967cf6b76acbeb271b4f13c15840187ecd899e01390272a8d8289088199b3453945fa076819b5b5df60c325c10315477cc801044dfb553e780a300d79627ef5c09e64c6f953cc33bbc59152c900282a219ef64a40158201af8fa0b754ff99253d983894e63a2b09cbb56c833ba18c3384210163f63dcfc025820bc65be1b0b9d7531778a1317c2aa6de936963c3f9ac7d5ee9e9eda25e0c97c5e0358390180f9e2c88e6c817008f3a812ed889b4a4da8e0bd103f86e7335422aa122a946b9ad3d2ddf029d3a828f0468aece76895f15c9efbd69b4277041a0159613d19ef65a101584074f27d877bbb4a5fc4f7c56869905c11f70bad0af3de24b23afaa1d024e750930f434ecc4b73e5d1723c2cb8548e8bf6098ac876487b3a6ed0891cb76994d40980',
+            },
+            legacyResults: [
+                {
+                    // older FW doesn't support auxiliary data
+                    rules: ['<2.3.7'],
+                    payload: false,
+                },
+            ],
         },
 
         {

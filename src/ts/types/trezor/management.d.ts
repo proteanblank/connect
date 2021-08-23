@@ -1,3 +1,5 @@
+import type { SafetyCheckLevel } from './protobuf';
+
 export interface ResetDevice {
     strength?: number;
     label?: string;
@@ -15,6 +17,7 @@ export interface ApplySettings {
     use_passphrase?: boolean;
     label?: string;
     auto_lock_delay_ms?: number;
+    safety_checks?: SafetyCheckLevel;
 }
 
 export interface ApplyFlags {
@@ -26,18 +29,14 @@ export interface ChangePin {
 }
 
 export interface FirmwareUpdateBinary {
-    binary: number[];
+    binary: ArrayBuffer;
 }
 
 export interface FirmwareUpdate {
     version: number[];
-    btcOnly: boolean;
+    btcOnly?: boolean;
     baseUrl?: string;
-}
-
-export interface FirmwareRequest {
-    length: number;
-    offset: number;
+    intermediary?: boolean;
 }
 
 export interface RecoveryDevice {

@@ -2,7 +2,11 @@ import coinsJSON from '../../../data/coins.json';
 import configJSON from '../../../data/config.json';
 import { parseCoinsJson, getAllNetworks } from '../../data/CoinInfo';
 
-import { parseCapabilities, getUnavailableCapabilities } from '../deviceFeaturesUtils';
+import {
+    parseCapabilities,
+    getUnavailableCapabilities,
+    parseRevision,
+} from '../deviceFeaturesUtils';
 
 describe('utils/deviceFeaturesUtils', () => {
     beforeAll(() => {
@@ -102,19 +106,21 @@ describe('utils/deviceFeaturesUtils', () => {
 
         // default Capabilities T1
         expect(getUnavailableCapabilities(feat1, coins, support)).toEqual({
-            ada: 'no-capability',
-            bnb: 'no-capability',
-            eos: 'no-capability',
-            ere: 'update-required',
+            ada: 'no-support',
+            bnb: 'no-support',
+            eos: 'no-support',
             ppc: 'update-required',
+            sys: 'update-required',
             tppc: 'update-required',
-            txrp: 'no-capability',
+            txrp: 'no-support',
             uno: 'update-required',
-            xrp: 'no-capability',
-            xtz: 'no-capability',
+            xrp: 'no-support',
+            xtz: 'no-support',
             xvg: 'update-required',
             zcr: 'update-required',
             replaceTransaction: 'update-required',
+            decreaseOutput: 'update-required',
+            eip1559: 'no-support',
         });
 
         const feat2 = {
@@ -128,52 +134,56 @@ describe('utils/deviceFeaturesUtils', () => {
         // default Capabilities T2
         expect(getUnavailableCapabilities(feat2, coins, support)).toEqual({
             replaceTransaction: 'update-required',
+            decreaseOutput: 'update-required',
+            eip1559: 'update-required',
         });
 
-        // excluded single method without specified coins
+        // added new capability
         expect(
             getUnavailableCapabilities(feat2, coins, [
                 {
                     min: ['0', '2.99.99'],
-                    excludedMethods: ['getAccountInfo'],
+                    capabilities: ['newCapabilityOrFeature'],
                 },
             ]),
         ).toEqual({
-            getAccountInfo: 'update-required',
+            newCapabilityOrFeature: 'update-required',
         });
 
-        // excluded single method with specified coins
         expect(
             getUnavailableCapabilities(feat2, coins, [
                 {
-                    min: ['0', '2.99.99'],
-                    coin: ['xrp', 'txrp'],
-                    excludedMethods: ['getAccountInfo'],
+                    min: ['0', '0'],
+                    capabilities: ['newCapabilityOrFeature'],
                 },
             ]),
         ).toEqual({
-            getAccountInfo: ['xrp', 'txrp'],
-        });
-
-        // disable multiple methods for outdated trezor-connect
-        expect(
-            getUnavailableCapabilities(feat2, coins, [
-                {
-                    max: ['0', '2.1.0'],
-                    coin: ['xrp', 'txrp'],
-                    excludedMethods: ['rippleGetAddress'],
-                },
-                {
-                    max: ['0', '2.1.0'],
-                    excludedMethods: ['tezosSignTransaction'],
-                },
-            ]),
-        ).toEqual({
-            rippleGetAddress: ['xrp', 'txrp'],
-            tezosSignTransaction: 'trezor-connect-outdated',
+            newCapabilityOrFeature: 'no-support',
         });
 
         // without capabilities
         expect(getUnavailableCapabilities({}, coins, support)).toEqual({});
+    });
+
+    describe('parseRevision', () => {
+        it('parses hexadecimal raw bytes to the standard hexadecimal notation', () => {
+            expect(parseRevision({ revision: '6466303936336563' })).toEqual('df0963ec');
+        });
+
+        it('does nothing when standard hexadecimal notation is parsed', () => {
+            expect(parseRevision({ revision: 'f4424ece1ccb7fc0d6cad00ff840fac287a34f07' })).toEqual(
+                'f4424ece1ccb7fc0d6cad00ff840fac287a34f07',
+            );
+        });
+
+        it('does nothing when standard hexadecimal notation with only 0-9 symbols is parsed', () => {
+            expect(parseRevision({ revision: '2442434213337100161230033840333287234307' })).toEqual(
+                '2442434213337100161230033840333287234307',
+            );
+        });
+
+        it('passes null, caused by bootloader mode, through', () => {
+            expect(parseRevision({ revision: null })).toEqual(null);
+        });
     });
 });

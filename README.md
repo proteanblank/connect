@@ -1,4 +1,4 @@
-# Trezor Connect API version 8.1.25
+# Trezor Connect API version 8.1.30-beta.2
 [![Build Status](https://github.com/trezor/connect/actions/workflows/tests.yml/badge.svg)](https://github.com/trezor/connect/actions/workflows/tests.yml)
 [![NPM](https://img.shields.io/npm/v/trezor-connect.svg)](https://www.npmjs.org/package/trezor-connect)
 [![Known Vulnerabilities](https://snyk.io/test/github/trezor/connect/badge.svg?targetFile=package.json)](https://snyk.io/test/github/trezor/connect?targetFile=package.json)
@@ -19,5 +19,4 @@ Currently, we are at version 8, which has an url https://connect.trezor.io/8/tre
 With regards to this repo - All updates should go to current version branch, the previous releases are in corresponding branches. The gh-pages is the same older version, that is used at trezor.github.io/connect/connect.js, and it's there for backwards compatibility; please don't touch.
 
 ## Tests
-For integration testing against trezord and emulator refer to [this document](./tests/README.md). Please note that tests in 
-`src/__tests__` are considered deprecated.
+For integration testing against trezord and emulator refer to [this document](./tests/README.md).

@@ -10,7 +10,7 @@ import type {
     Features,
     Deferred,
     FirmwareRelease,
-    UnavailableCapability,
+    UnavailableCapabilities,
 } from '../types';
 
 import { UI, DEVICE, ERRORS, NETWORK } from '../constants';
@@ -18,7 +18,11 @@ import { create as createDeferred } from '../utils/deferred';
 import DataManager from '../data/DataManager';
 import { getAllNetworks } from '../data/CoinInfo';
 import { getFirmwareStatus, getRelease } from '../data/FirmwareInfo';
-import { parseCapabilities, getUnavailableCapabilities } from '../utils/deviceFeaturesUtils';
+import {
+    parseCapabilities,
+    getUnavailableCapabilities,
+    parseRevision,
+} from '../utils/deviceFeaturesUtils';
 import { versionCompare } from '../utils/versionUtils';
 import { initLog } from '../utils/debug';
 
@@ -63,6 +67,8 @@ class Device extends EventEmitter {
 
     hasDebugLink: boolean;
 
+    unreadableError: ?string; // unreadable error like: HID device, LIBUSB_ERROR
+
     firmwareStatus: DeviceFirmwareStatus;
 
     firmwareRelease: ?FirmwareRelease;
@@ -93,7 +99,7 @@ class Device extends EventEmitter {
 
     externalState: string[] = [];
 
-    unavailableCapabilities: { [key: string]: UnavailableCapability } = {};
+    unavailableCapabilities: UnavailableCapabilities = {};
 
     networkTypeState: string[] = [];
 
@@ -122,8 +128,14 @@ class Device extends EventEmitter {
         }
     }
 
-    static createUnacquired(transport: Transport, descriptor: DeviceDescriptor) {
-        return new Device(transport, descriptor);
+    static createUnacquired(
+        transport: Transport,
+        descriptor: DeviceDescriptor,
+        unreadableError?: string,
+    ) {
+        const device = new Device(transport, descriptor);
+        device.unreadableError = unreadableError;
+        return device;
     }
 
     async acquire() {
@@ -265,6 +277,13 @@ class Device extends EventEmitter {
                     ]);
                 }
             } catch (error) {
+                if (!this.inconsistent && error.message === 'GetFeatures timeout') {
+                    // handling corner-case T1 + bootloader < 1.4.0 (above)
+                    // if GetFeatures fails try again
+                    // this time add empty "fn" param to force Initialize message
+                    this.inconsistent = true;
+                    return this._runInner(() => Promise.resolve({}), options);
+                }
                 this.inconsistent = true;
                 await this.deferredActions[DEVICE.ACQUIRE].promise;
                 this.runPromise = null;
@@ -445,6 +464,10 @@ class Device extends EventEmitter {
         } else {
             feat.unlocked = true;
         }
+        // fix inconsistency of revision attribute between T1 and T2
+        const revision = parseRevision(feat);
+        feat.revision = revision;
+
         this.features = feat;
         this.featuresNeedsReload = false;
     }
@@ -630,7 +653,8 @@ class Device extends EventEmitter {
         return null;
     }
 
-    onBeforeUnload() {
+    dispose() {
+        this.removeAllListeners();
         if (this.isUsedHere() && this.activitySessionID) {
             try {
                 if (this.commands) {
@@ -652,10 +676,11 @@ class Device extends EventEmitter {
 
     // simplified object to pass via postMessage
     toMessageObject(): DeviceTyped {
-        if (this.originalDescriptor.path === DEVICE.UNREADABLE) {
+        if (this.unreadableError) {
             return {
                 type: 'unreadable',
                 path: this.originalDescriptor.path,
+                error: this.unreadableError, // provide error details
                 label: 'Unreadable device',
             };
         }
